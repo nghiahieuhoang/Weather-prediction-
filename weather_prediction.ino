@@ -3,54 +3,58 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 
-// Khởi tạo LCD 1602 I2C (Địa chỉ mặc định thường là 0x27)
+// Khởi tạo
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 Adafruit_MPU6050 mpu;
 
-// Chân đọc cảm biến mưa (Chọn chân ADC như GPIO 34)
 const int rainSensorPin = 34;
+const int ta195Pin = 35; // Giả sử chân ADC cho cảm biến dòng
 
 void setup() {
   Serial.begin(115200);
+  Wire.begin();
 
-  // Khởi động màn hình LCD
   lcd.init();
   lcd.backlight();
 
-  // Khởi động cảm biến góc/gia tốc MPU6050
   if (!mpu.begin()) {
     lcd.print("MPU6050 Error!");
-    while (1) delay(10);
+    while (1);
   }
 
   pinMode(rainSensorPin, INPUT);
-  lcd.print("Weather Project");
-  lcd.setCursor(0, 1);
-  lcd.print("System Ready...");
-  delay(2000);
+  pinMode(ta195Pin, INPUT);
+
+  lcd.print("System Initialized");
+  delay(1000);
   lcd.clear();
 }
 
 void loop() {
-  // Đọc giá trị từ cảm biến mưa
+  // 1. Đọc cảm biến mưa
   int rainValue = analogRead(rainSensorPin);
 
-  // Đọc dữ liệu từ MPU6050
+  // 2. Đọc cảm biến dòng TA195
+  int currentRaw = analogRead(ta195Pin);
+
+  // 3. Đọc MPU6050
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
-  // Hiển thị dòng 1: Giá trị cảm biến mưa
+  // Hiển thị luân phiên trên LCD để không bị quá tải ký tự
+  // Trang 1: Mưa và Dòng điện
   lcd.setCursor(0, 0);
-  lcd.print("Rain Vol: ");
-  lcd.print(rainValue);
-  lcd.print("   "); // Xóa ký tự thừa phía sau nếu có
-
-  // Hiển thị dòng 2: Trục X và Y của MPU6050 (để biết bo mạch có bị nghiêng do gió/mưa không)
+  lcd.print("Rain:"); lcd.print(rainValue);
   lcd.setCursor(0, 1);
-  lcd.print("X:");
-  lcd.print(a.acceleration.x, 1);
-  lcd.print(" Y:");
-  lcd.print(a.acceleration.y, 1);
+  lcd.print("Amp:"); lcd.print(currentRaw);
+  delay(2000);
 
-  delay(500); // Cập nhật lại sau mỗi 0.5 giây
+  // Trang 2: Góc nghiêng MPU
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("MPU X:"); lcd.print(a.acceleration.x, 1);
+  lcd.setCursor(0, 1);
+  lcd.print("MPU Y:"); lcd.print(a.acceleration.y, 1);
+  delay(2000);
+  lcd.clear();
 }
